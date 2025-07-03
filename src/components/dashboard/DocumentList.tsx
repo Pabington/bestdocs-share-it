@@ -19,6 +19,10 @@ interface DocumentItem {
   visibility: 'public' | 'private';
   created_at: string;
   user_id: string;
+  profiles?: {
+    email: string;
+    full_name: string | null;
+  };
 }
 
 interface DocumentListProps {
@@ -37,51 +41,10 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
     if (!user) return;
 
     try {
-      let query = supabase
-        .from('documents')
-        .select(`
-          *,
-          profiles!documents_user_id_fkey (email, full_name)
-        `);
-
-      // Aplicar filtros conforme regra de negócio
-      switch (filter) {
-        case 'my_private':
-          query = query
-            .eq('user_id', user.id)
-            .eq('visibility', 'private');
-          break;
-        case 'public':
-          query = query.eq('visibility', 'public');
-          break;
-        case 'shared':
-          // Documentos compartilhados comigo
-          const { data: sharedDocs } = await supabase
-            .from('document_shares')
-            .select(`
-              document_id,
-              documents!inner (
-                *,
-                profiles!documents_user_id_fkey (email, full_name)
-              )
-            `)
-            .eq('shared_with_user_id', user.id);
-          
-          const mappedSharedDocs = sharedDocs?.map(share => ({
-            ...share.documents,
-            shared_by: share.documents.profiles
-          })) || [];
-          
-          setDocuments(mappedSharedDocs as DocumentItem[]);
-          setLoading(false);
-          return;
-        default:
-          // 'all': Meus privados + públicos de todos + compartilhados comigo
-          break;
-      }
+      let allDocs: DocumentItem[] = [];
 
       if (filter === 'all') {
-        // Buscar meus documentos privados + documentos públicos
+        // Buscar meus documentos privados
         const { data: myPrivateDocs } = await supabase
           .from('documents')
           .select(`
@@ -91,6 +54,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
           .eq('user_id', user.id)
           .eq('visibility', 'private');
 
+        // Buscar documentos públicos de todos os usuários
         const { data: publicDocs } = await supabase
           .from('documents')
           .select(`
@@ -99,6 +63,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
           `)
           .eq('visibility', 'public');
 
+        // Buscar documentos compartilhados comigo
         const { data: sharedDocs } = await supabase
           .from('document_shares')
           .select(`
@@ -112,24 +77,58 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
 
         const mappedSharedDocs = sharedDocs?.map(share => share.documents) || [];
         
-        const allDocs = [
+        allDocs = [
           ...(myPrivateDocs || []),
           ...(publicDocs || []),
           ...mappedSharedDocs
         ];
-
-        // Remover duplicatas por ID
-        const uniqueDocs = allDocs.filter((doc, index, self) => 
-          index === self.findIndex(d => d.id === doc.id)
-        );
-
-        setDocuments(uniqueDocs as DocumentItem[]);
       } else {
-        query = query.order('created_at', { ascending: false });
-        const { data, error } = await query;
+        // Aplicar filtros específicos
+        let query = supabase
+          .from('documents')
+          .select(`
+            *,
+            profiles!documents_user_id_fkey (email, full_name)
+          `);
+
+        switch (filter) {
+          case 'my_private':
+            query = query
+              .eq('user_id', user.id)
+              .eq('visibility', 'private');
+            break;
+          case 'public':
+            query = query.eq('visibility', 'public');
+            break;
+          case 'shared':
+            const { data: sharedDocs } = await supabase
+              .from('document_shares')
+              .select(`
+                document_id,
+                documents!inner (
+                  *,
+                  profiles!documents_user_id_fkey (email, full_name)
+                )
+              `)
+              .eq('shared_with_user_id', user.id);
+            
+            allDocs = sharedDocs?.map(share => share.documents) || [];
+            setDocuments(allDocs as DocumentItem[]);
+            setLoading(false);
+            return;
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
         if (error) throw error;
-        setDocuments(data || []);
+        allDocs = data || [];
       }
+
+      // Remover duplicatas por ID
+      const uniqueDocs = allDocs.filter((doc, index, self) => 
+        index === self.findIndex(d => d.id === doc.id)
+      );
+
+      setDocuments(uniqueDocs);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar documentos",
@@ -147,24 +146,37 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
 
   const handleDownload = async (document: DocumentItem) => {
     try {
+      // Obter URL pública do arquivo
       const { data, error } = await supabase.storage
         .from('documents')
-        .download(document.file_path);
+        .createSignedUrl(document.file_path, 3600); // 1 hora de validade
 
       if (error) throw error;
 
-      const url = URL.createObjectURL(data);
-      const a = window.document.createElement('a');
+      // Fazer download do arquivo
+      const response = await fetch(data.signedUrl);
+      if (!response.ok) throw new Error('Erro ao baixar o arquivo');
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
       a.href = url;
       a.download = document.name;
-      window.document.body.appendChild(a);
+      document.body.appendChild(a);
       a.click();
-      window.document.body.removeChild(a);
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download concluído",
+        description: `${document.name} foi baixado com sucesso.`,
+      });
     } catch (error: any) {
+      console.error('Erro no download:', error);
       toast({
         title: "Erro no download",
-        description: error.message,
+        description: error.message || "Não foi possível baixar o arquivo",
         variant: "destructive",
       });
     }
@@ -217,6 +229,10 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const getFileExtension = (fileName: string) => {
+    return fileName.split('.').pop()?.toUpperCase() || '';
+  };
+
   const getDocumentOrigin = (document: DocumentItem) => {
     if (document.user_id === user?.id) {
       return document.visibility === 'private' ? 'Meu documento privado' : 'Meu documento público';
@@ -235,6 +251,18 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
     } else {
       return 'secondary';
     }
+  };
+
+  const getUserDisplayName = (document: DocumentItem) => {
+    if (document.user_id === user?.id) {
+      return 'Você';
+    }
+    
+    if (document.profiles) {
+      return document.profiles.full_name || document.profiles.email;
+    }
+    
+    return 'Usuário desconhecido';
   };
 
   if (loading) {
@@ -293,10 +321,19 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <FileText className="h-8 w-8 text-blue-500" />
-                    <div>
-                      <h3 className="font-medium">{document.name}</h3>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">{document.name}</h3>
+                        <Badge variant="outline" className="text-xs">
+                          {getFileExtension(document.name)}
+                        </Badge>
+                      </div>
                       <p className="text-sm text-gray-500">
                         {formatFileSize(document.file_size)} • {new Date(document.created_at).toLocaleDateString('pt-BR')}
+                      </p>
+                      <p className="text-xs text-gray-600 flex items-center gap-1">
+                        <span>Enviado por:</span>
+                        <span className="font-medium">{getUserDisplayName(document)}</span>
                       </p>
                       <p className="text-xs text-gray-400">
                         {getDocumentOrigin(document)}
@@ -323,6 +360,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
                       variant="outline"
                       size="sm"
                       onClick={() => handleDownload(document)}
+                      title="Baixar arquivo"
                     >
                       <Download className="h-4 w-4" />
                     </Button>
@@ -332,6 +370,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
                         variant="outline"
                         size="sm"
                         onClick={() => handleShare(document)}
+                        title="Compartilhar arquivo"
                       >
                         <Share2 className="h-4 w-4" />
                       </Button>
@@ -342,6 +381,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
                         variant="outline"
                         size="sm"
                         onClick={() => handleDelete(document)}
+                        title="Excluir arquivo"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
