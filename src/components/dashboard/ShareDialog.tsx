@@ -2,16 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, UserPlus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { X, UserPlus, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
-interface Document {
+interface DocumentItem {
   id: string;
   name: string;
   file_path: string;
@@ -29,7 +27,7 @@ interface Profile {
 }
 
 interface ShareDialogProps {
-  document: Document;
+  document: DocumentItem;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onShareComplete: () => void;
@@ -122,11 +120,19 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       fetchSharedUsers();
       onShareComplete();
     } catch (error: any) {
-      toast({
-        title: "Erro ao compartilhar",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error.code === '23505') {
+        toast({
+          title: "Documento já compartilhado",
+          description: "Este documento já foi compartilhado com este usuário.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao compartilhar",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -164,34 +170,41 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Compartilhar Documento</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Compartilhar Documento
+          </DialogTitle>
           <DialogDescription>
             Compartilhe "{document.name}" com outros usuários do sistema.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Add new share */}
-          <div className="space-y-2">
-            <Label>Compartilhar com usuário</Label>
+          <div className="space-y-3">
+            <h4 className="font-medium">Compartilhar com novo usuário</h4>
             <div className="flex gap-2">
               <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Selecione um usuário" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.full_name || user.email}
-                    </SelectItem>
-                  ))}
+                  {availableUsers.length === 0 ? (
+                    <SelectItem value="" disabled>Nenhum usuário disponível</SelectItem>
+                  ) : (
+                    availableUsers.map((availableUser) => (
+                      <SelectItem key={availableUser.id} value={availableUser.id}>
+                        {availableUser.full_name || availableUser.email}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <Button 
                 onClick={handleShare} 
-                disabled={!selectedUserId || loading}
+                disabled={!selectedUserId || loading || availableUsers.length === 0}
                 size="sm"
               >
                 <UserPlus className="h-4 w-4" />
@@ -201,18 +214,29 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
 
           {/* Current shares */}
           {sharedUsers.length > 0 && (
-            <div className="space-y-2">
-              <Label>Compartilhado com:</Label>
-              <div className="space-y-2">
+            <div className="space-y-3">
+              <h4 className="font-medium">Compartilhado com:</h4>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
                 {sharedUsers.map((sharedUser) => (
-                  <div key={sharedUser.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <span className="text-sm">
-                      {sharedUser.full_name || sharedUser.email}
-                    </span>
+                  <div key={sharedUser.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-blue-600">
+                          {(sharedUser.full_name || sharedUser.email).charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {sharedUser.full_name || 'Usuário'}
+                        </p>
+                        <p className="text-xs text-gray-500">{sharedUser.email}</p>
+                      </div>
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleRemoveShare(sharedUser.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -223,9 +247,12 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
           )}
 
           {availableUsers.length === 0 && sharedUsers.length === 0 && (
-            <p className="text-sm text-gray-500 text-center py-4">
-              Não há outros usuários para compartilhar.
-            </p>
+            <div className="text-center py-6">
+              <Users className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+              <p className="text-sm text-gray-500">
+                Não há outros usuários registrados no sistema para compartilhar.
+              </p>
+            </div>
           )}
         </div>
       </DialogContent>

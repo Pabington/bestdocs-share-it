@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { Badge } from '@/components/ui/badge';
 
 export const Header = () => {
   const { user, signOut } = useAuth();
@@ -16,12 +17,15 @@ export const Header = () => {
         </h1>
         
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <User className="h-4 w-4" />
-            <span>{user?.email}</span>
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-full">
+              <User className="h-4 w-4 text-gray-600" />
+              <span className="text-gray-700">{user?.email}</span>
+            </div>
           </div>
-          <Button variant="outline" size="sm" onClick={signOut}>
-            <LogOut className="h-4 w-4 mr-2" />
+          
+          <Button variant="outline" size="sm" onClick={signOut} className="flex items-center gap-2">
+            <LogOut className="h-4 w-4" />
             Sair
           </Button>
         </div>
