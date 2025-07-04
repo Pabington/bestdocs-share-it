@@ -25,6 +25,7 @@ export const useDocumentActions = (onRefetch: () => void) => {
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       
+      // CORREÇÃO: Usar window.document em vez de document para evitar conflito
       const downloadLink = window.document.createElement('a');
       downloadLink.href = url;
       downloadLink.download = documentItem.name;

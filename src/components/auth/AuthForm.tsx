@@ -114,6 +114,12 @@ export const AuthForm = () => {
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
               </form>
+              
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800 font-medium">Acesso Admin:</p>
+                <p className="text-xs text-blue-600">Email: pabington@bestloterias.com.br</p>
+                <p className="text-xs text-blue-600">Senha: @dm1nB&st</p>
+              </div>
             </TabsContent>
             
             <TabsContent value="signup">
