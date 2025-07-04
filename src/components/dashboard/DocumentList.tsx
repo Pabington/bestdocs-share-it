@@ -1,12 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Share2, Download, Trash2, Eye, Users, Filter } from 'lucide-react';
+import { FileText, Share2, Download, Trash2, Eye, Users, Filter, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { toast } from '@/hooks/use-toast';
 import { ShareDialog } from './ShareDialog';
 
@@ -34,8 +34,9 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
   const [loading, setLoading] = useState(true);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentItem | null>(null);
-  const [filter, setFilter] = useState<'all' | 'my_private' | 'public' | 'shared'>('all');
+  const [filter, setFilter] = useState<'all' | 'my_private' | 'public' | 'shared' | 'admin_all'>('all');
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
 
   const fetchDocuments = async () => {
     if (!user) return;
@@ -43,7 +44,19 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
     try {
       let allDocs: DocumentItem[] = [];
 
-      if (filter === 'all') {
+      if (filter === 'admin_all' && isAdmin) {
+        // Admin pode ver TODOS os documentos
+        const { data, error } = await supabase
+          .from('documents')
+          .select(`
+            *,
+            profiles!documents_user_id_fkey (email, full_name)
+          `)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        allDocs = data || [];
+      } else if (filter === 'all') {
         // Buscar meus documentos privados
         const { data: myPrivateDocs } = await supabase
           .from('documents')
@@ -142,14 +155,14 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
 
   useEffect(() => {
     fetchDocuments();
-  }, [user, refreshTrigger, filter]);
+  }, [user, refreshTrigger, filter, isAdmin]);
 
-  const handleDownload = async (document: DocumentItem) => {
+  const handleDownload = async (documentItem: DocumentItem) => {
     try {
       // Obter URL pública do arquivo
       const { data, error } = await supabase.storage
         .from('documents')
-        .createSignedUrl(document.file_path, 3600); // 1 hora de validade
+        .createSignedUrl(documentItem.file_path, 3600); // 1 hora de validade
 
       if (error) throw error;
 
@@ -160,17 +173,17 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = document.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const downloadLink = window.document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.download = documentItem.name;
+      window.document.body.appendChild(downloadLink);
+      downloadLink.click();
+      window.document.body.removeChild(downloadLink);
       URL.revokeObjectURL(url);
 
       toast({
         title: "Download concluído",
-        description: `${document.name} foi baixado com sucesso.`,
+        description: `${documentItem.name} foi baixado com sucesso.`,
       });
     } catch (error: any) {
       console.error('Erro no download:', error);
@@ -182,14 +195,25 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
     }
   };
 
-  const handleDelete = async (document: DocumentItem) => {
+  const handleDelete = async (documentItem: DocumentItem) => {
+    const canDelete = documentItem.user_id === user?.id || isAdmin;
+    
+    if (!canDelete) {
+      toast({
+        title: "Permissão negada",
+        description: "Você não tem permissão para excluir este documento.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!confirm('Tem certeza que deseja excluir este documento?')) return;
 
     try {
       // Delete from storage
       const { error: storageError } = await supabase.storage
         .from('documents')
-        .remove([document.file_path]);
+        .remove([documentItem.file_path]);
 
       if (storageError) throw storageError;
 
@@ -197,13 +221,13 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
       const { error: dbError } = await supabase
         .from('documents')
         .delete()
-        .eq('id', document.id);
+        .eq('id', documentItem.id);
 
       if (dbError) throw dbError;
 
       toast({
         title: "Documento excluído",
-        description: `${document.name} foi removido.`,
+        description: `${documentItem.name} foi removido.`,
       });
 
       fetchDocuments();
@@ -216,8 +240,8 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
     }
   };
 
-  const handleShare = (document: DocumentItem) => {
-    setSelectedDocument(document);
+  const handleShare = (documentItem: DocumentItem) => {
+    setSelectedDocument(documentItem);
     setShareDialogOpen(true);
   };
 
@@ -233,36 +257,90 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
     return fileName.split('.').pop()?.toUpperCase() || '';
   };
 
-  const getDocumentOrigin = (document: DocumentItem) => {
-    if (document.user_id === user?.id) {
-      return document.visibility === 'private' ? 'Meu documento privado' : 'Meu documento público';
-    } else if (document.visibility === 'public') {
+  const getDocumentOrigin = (documentItem: DocumentItem) => {
+    if (filter === 'admin_all' && isAdmin) {
+      if (documentItem.user_id === user?.id) {
+        return documentItem.visibility === 'private' ? 'Meu documento privado' : 'Meu documento público';
+      } else {
+        return documentItem.visibility === 'private' ? 'Documento privado (outro usuário)' : 'Documento público (outro usuário)';
+      }
+    }
+    
+    if (documentItem.user_id === user?.id) {
+      return documentItem.visibility === 'private' ? 'Meu documento privado' : 'Meu documento público';
+    } else if (documentItem.visibility === 'public') {
       return 'Documento público';
     } else {
       return 'Compartilhado comigo';
     }
   };
 
-  const getOriginBadgeVariant = (document: DocumentItem) => {
-    if (document.user_id === user?.id) {
-      return document.visibility === 'private' ? 'secondary' : 'default';
-    } else if (document.visibility === 'public') {
+  const getOriginBadgeVariant = (documentItem: DocumentItem) => {
+    if (filter === 'admin_all' && isAdmin && documentItem.user_id !== user?.id) {
+      return 'destructive';
+    }
+    
+    if (documentItem.user_id === user?.id) {
+      return documentItem.visibility === 'private' ? 'secondary' : 'default';
+    } else if (documentItem.visibility === 'public') {
       return 'outline';
     } else {
       return 'secondary';
     }
   };
 
-  const getUserDisplayName = (document: DocumentItem) => {
-    if (document.user_id === user?.id) {
+  const getUserDisplayName = (documentItem: DocumentItem) => {
+    if (documentItem.user_id === user?.id) {
       return 'Você';
     }
     
-    if (document.profiles) {
-      return document.profiles.full_name || document.profiles.email;
+    if (documentItem.profiles) {
+      return documentItem.profiles.full_name || documentItem.profiles.email;
     }
     
     return 'Usuário desconhecido';
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  const getFilterDescription = () => {
+    switch (filter) {
+      case 'all':
+        return 'Mostrando seus documentos privados, documentos públicos de todos os usuários e documentos compartilhados com você.';
+      case 'my_private':
+        return 'Mostrando apenas seus documentos privados.';
+      case 'public':
+        return 'Mostrando documentos públicos de todos os usuários.';
+      case 'shared':
+        return 'Mostrando documentos que outros usuários compartilharam com você.';
+      case 'admin_all':
+        return isAdmin ? 'Visualização administrativa: mostrando TODOS os documentos do sistema (públicos e privados).' : '';
+      default:
+        return '';
+    }
+  };
+
+  const getEmptyStateMessage = () => {
+    switch (filter) {
+      case 'all':
+        return 'Nenhum documento encontrado';
+      case 'my_private':
+        return 'Você não possui documentos privados';
+      case 'public':
+        return 'Nenhum documento público encontrado';
+      case 'shared':
+        return 'Nenhum documento foi compartilhado com você';
+      case 'admin_all':
+        return 'Nenhum documento encontrado no sistema';
+      default:
+        return 'Nenhum documento encontrado';
+    }
   };
 
   if (loading) {
@@ -278,11 +356,17 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
               <CardTitle className="flex items-center gap-2">
                 <Filter className="h-5 w-5" />
                 Filtrar Documentos
+                {isAdmin && (
+                  <Badge variant="destructive" className="ml-2">
+                    <Shield className="h-3 w-3 mr-1" />
+                    ADMIN
+                  </Badge>
+                )}
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <Select value={filter} onValueChange={(value: 'all' | 'my_private' | 'public' | 'shared') => setFilter(value)}>
+            <Select value={filter} onValueChange={(value: 'all' | 'my_private' | 'public' | 'shared' | 'admin_all') => setFilter(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -291,13 +375,18 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
                 <SelectItem value="my_private">Meus documentos privados</SelectItem>
                 <SelectItem value="public">Documentos públicos</SelectItem>
                 <SelectItem value="shared">Compartilhados comigo</SelectItem>
+                {isAdmin && (
+                  <SelectItem value="admin_all">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      Todos (Administrador)
+                    </div>
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
             <p className="text-sm text-gray-600 mt-2">
-              {filter === 'all' && 'Mostrando seus documentos privados, documentos públicos de todos os usuários e documentos compartilhados com você.'}
-              {filter === 'my_private' && 'Mostrando apenas seus documentos privados.'}
-              {filter === 'public' && 'Mostrando documentos públicos de todos os usuários.'}
-              {filter === 'shared' && 'Mostrando documentos que outros usuários compartilharam com você.'}
+              {getFilterDescription()}
             </p>
           </CardContent>
         </Card>
@@ -306,44 +395,42 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
           <Card>
             <CardContent className="text-center py-8">
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">
-                {filter === 'all' && 'Nenhum documento encontrado'}
-                {filter === 'my_private' && 'Você não possui documentos privados'}
-                {filter === 'public' && 'Nenhum documento público encontrado'}
-                {filter === 'shared' && 'Nenhum documento foi compartilhado com você'}
-              </p>
+              <p className="text-gray-500">{getEmptyStateMessage()}</p>
             </CardContent>
           </Card>
         ) : (
-          documents.map((document) => (
-            <Card key={document.id}>
+          documents.map((documentItem) => (
+            <Card key={documentItem.id}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <FileText className="h-8 w-8 text-blue-500" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{document.name}</h3>
+                        <h3 className="font-medium">{documentItem.name}</h3>
                         <Badge variant="outline" className="text-xs">
-                          {getFileExtension(document.name)}
+                          {getFileExtension(documentItem.name)}
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-500">
-                        {formatFileSize(document.file_size)} • {new Date(document.created_at).toLocaleDateString('pt-BR')}
+                        {formatFileSize(documentItem.file_size)} • {formatDate(documentItem.created_at)}
                       </p>
                       <p className="text-xs text-gray-600 flex items-center gap-1">
                         <span>Enviado por:</span>
-                        <span className="font-medium">{getUserDisplayName(document)}</span>
+                        <span className="font-medium">{getUserDisplayName(documentItem)}</span>
+                        {documentItem.profiles && documentItem.user_id !== user?.id && (
+                          <span className="text-gray-400">({documentItem.profiles.email})</span>
+                        )}
                       </p>
                       <p className="text-xs text-gray-400">
-                        {getDocumentOrigin(document)}
+                        {getDocumentOrigin(documentItem)}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Badge variant={getOriginBadgeVariant(document)}>
-                      {document.visibility === 'public' ? (
+                    <Badge variant={getOriginBadgeVariant(documentItem)}>
+                      {documentItem.visibility === 'public' ? (
                         <>
                           <Eye className="h-3 w-3 mr-1" />
                           Público
@@ -359,29 +446,29 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDownload(document)}
+                      onClick={() => handleDownload(documentItem)}
                       title="Baixar arquivo"
                     >
                       <Download className="h-4 w-4" />
                     </Button>
 
-                    {document.visibility === 'private' && document.user_id === user?.id && (
+                    {documentItem.visibility === 'private' && documentItem.user_id === user?.id && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleShare(document)}
+                        onClick={() => handleShare(documentItem)}
                         title="Compartilhar arquivo"
                       >
                         <Share2 className="h-4 w-4" />
                       </Button>
                     )}
 
-                    {document.user_id === user?.id && (
+                    {(documentItem.user_id === user?.id || isAdmin) && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDelete(document)}
-                        title="Excluir arquivo"
+                        onClick={() => handleDelete(documentItem)}
+                        title={isAdmin && documentItem.user_id !== user?.id ? "Excluir arquivo (Admin)" : "Excluir arquivo"}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

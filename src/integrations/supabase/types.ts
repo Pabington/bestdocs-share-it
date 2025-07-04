@@ -132,6 +132,10 @@ export type Database = {
         Args: { doc_id: string; user_id: string }
         Returns: boolean
       }
+      can_admin_access_all_documents: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
       is_admin: {
         Args: { user_id: string }
         Returns: boolean

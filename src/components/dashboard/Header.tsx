@@ -3,10 +3,12 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { LogOut, User, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Badge } from '@/components/ui/badge';
 
 export const Header = () => {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
 
   return (
     <header className="bg-white shadow-sm border-b px-6 py-4">
@@ -22,6 +24,12 @@ export const Header = () => {
               <User className="h-4 w-4 text-gray-600" />
               <span className="text-gray-700">{user?.email}</span>
             </div>
+            {isAdmin && (
+              <Badge variant="destructive" className="flex items-center gap-1">
+                <Shield className="h-3 w-3" />
+                Administrador
+              </Badge>
+            )}
           </div>
           
           <Button variant="outline" size="sm" onClick={signOut} className="flex items-center gap-2">
