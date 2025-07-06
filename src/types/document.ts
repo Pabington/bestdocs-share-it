@@ -15,3 +15,17 @@ export interface DocumentItem {
 }
 
 export type DocumentFilter = 'all' | 'my_private' | 'public' | 'shared' | 'admin_all';
+
+export interface DocumentSearchParams {
+  filter: DocumentFilter;
+  searchTerm: string;
+  page: number;
+  limit: number;
+}
+
+export interface DocumentListResponse {
+  documents: DocumentItem[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+}
