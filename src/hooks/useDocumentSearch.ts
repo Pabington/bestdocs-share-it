@@ -20,7 +20,8 @@ export const useDocumentSearch = () => {
 
     try {
       const { filter, searchTerm, page, limit } = params;
-      const offset = (page - 1) * limit;
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
 
       let countQuery = supabase.from('documents').select('id', { count: 'exact', head: true });
       let dataQuery = supabase
@@ -28,8 +29,8 @@ export const useDocumentSearch = () => {
         .select(`
           *,
           profiles!documents_user_id_fkey (email, full_name)
-        `)
-        .range(offset, offset + limit - 1)
+        `, { count: 'exact' })
+        .range(from, to)
         .order('created_at', { ascending: false });
 
       // Aplicar filtro de nome se fornecido
@@ -49,107 +50,46 @@ export const useDocumentSearch = () => {
         countQuery = countQuery.eq('visibility', 'public');
         dataQuery = dataQuery.eq('visibility', 'public');
       } else if (filter === 'shared') {
-        // Para documentos compartilhados, precisamos fazer uma consulta diferente
-        const { data: sharedDocs, error: sharedError } = await supabase
+        // Para documentos compartilhados, consulta especializada
+        const sharedQuery = supabase
           .from('document_shares')
           .select(`
-            document_id,
             documents!inner (
               *,
               profiles!documents_user_id_fkey (email, full_name)
             )
-          `)
+          `, { count: 'exact' })
           .eq('shared_with_user_id', user.id)
-          .range(offset, offset + limit - 1);
+          .range(from, to)
+          .order('created_at', { ascending: false });
+
+        // Aplicar filtro de nome se fornecido
+        if (searchTerm.trim()) {
+          sharedQuery.or(`documents.name.ilike.%${searchTerm.trim()}%`);
+        }
+
+        const { data: sharedData, count: sharedCount, error: sharedError } = await sharedQuery;
 
         if (sharedError) throw sharedError;
 
-        let filteredSharedDocs = sharedDocs?.map(share => share.documents) || [];
-        
-        // Aplicar filtro de nome se fornecido
-        if (searchTerm.trim()) {
-          filteredSharedDocs = filteredSharedDocs.filter(doc => 
-            doc.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
-          );
-        }
-
-        // Para contar o total de documentos compartilhados
-        const { data: allSharedDocs } = await supabase
-          .from('document_shares')
-          .select('document_id, documents!inner(name)')
-          .eq('shared_with_user_id', user.id);
-
-        let totalSharedCount = allSharedDocs?.length || 0;
-        if (searchTerm.trim()) {
-          totalSharedCount = allSharedDocs?.filter(share => 
-            share.documents.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
-          ).length || 0;
-        }
+        const documents = sharedData?.map(share => share.documents) || [];
+        const totalPages = Math.ceil((sharedCount || 0) / limit);
 
         setLoading(false);
         return {
-          documents: filteredSharedDocs as DocumentItem[],
-          totalCount: totalSharedCount,
-          totalPages: Math.ceil(totalSharedCount / limit),
+          documents: documents as DocumentItem[],
+          totalCount: sharedCount || 0,
+          totalPages,
           currentPage: page
         };
       } else if (filter === 'all') {
-        // Documentos do usuário (privados) + públicos + compartilhados
+        // Documentos do usuário (privados) + públicos
         countQuery = countQuery.or(`and(user_id.eq.${user.id},visibility.eq.private),visibility.eq.public`);
         dataQuery = dataQuery.or(`and(user_id.eq.${user.id},visibility.eq.private),visibility.eq.public`);
-
-        // Adicionar documentos compartilhados separadamente
-        const { data: sharedDocsData } = await supabase
-          .from('document_shares')
-          .select(`
-            documents!inner (
-              *,
-              profiles!documents_user_id_fkey (email, full_name)
-            )
-          `)
-          .eq('shared_with_user_id', user.id);
-
-        const sharedDocs = sharedDocsData?.map(share => share.documents) || [];
-        
-        // Executar consulta principal
-        const [{ count }, { data: mainDocs, error: dataError }] = await Promise.all([
-          countQuery,
-          dataQuery
-        ]);
-
-        if (dataError) throw dataError;
-
-        // Combinar resultados e remover duplicatas
-        const allDocs = [...(mainDocs || []), ...sharedDocs];
-        const uniqueDocs = allDocs.filter((doc, index, self) => 
-          index === self.findIndex(d => d.id === doc.id)
-        );
-
-        // Aplicar filtro de nome se fornecido
-        let filteredDocs = uniqueDocs;
-        if (searchTerm.trim()) {
-          filteredDocs = uniqueDocs.filter(doc => 
-            doc.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
-          );
-        }
-
-        // Paginar os resultados filtrados
-        const paginatedDocs = filteredDocs.slice(offset, offset + limit);
-        
-        setLoading(false);
-        return {
-          documents: paginatedDocs,
-          totalCount: filteredDocs.length,
-          totalPages: Math.ceil(filteredDocs.length / limit),
-          currentPage: page
-        };
       }
 
-      // Executar consultas para casos simples (my_private, public, admin_all)
-      const [{ count }, { data, error }] = await Promise.all([
-        countQuery,
-        dataQuery
-      ]);
+      // Executar consultas para casos simples
+      const { data, count, error } = await dataQuery;
 
       if (error) throw error;
 

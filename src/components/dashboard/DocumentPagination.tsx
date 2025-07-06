@@ -9,7 +9,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface DocumentPaginationProps {
   currentPage: number;
@@ -17,7 +16,6 @@ interface DocumentPaginationProps {
   totalCount: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
-  onItemsPerPageChange: (items: number) => void;
 }
 
 export const DocumentPagination: React.FC<DocumentPaginationProps> = ({
@@ -25,8 +23,7 @@ export const DocumentPagination: React.FC<DocumentPaginationProps> = ({
   totalPages,
   totalCount,
   itemsPerPage,
-  onPageChange,
-  onItemsPerPageChange
+  onPageChange
 }) => {
   if (totalPages <= 1) return null;
 
@@ -59,82 +56,65 @@ export const DocumentPagination: React.FC<DocumentPaginationProps> = ({
         Mostrando {startItem} a {endItem} de {totalCount} documentos
       </div>
       
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Itens por página:</span>
-          <Select value={itemsPerPage.toString()} onValueChange={(value) => onItemsPerPageChange(Number(value))}>
-            <SelectTrigger className="w-16">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="5">5</SelectItem>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious 
-                onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
-                className={currentPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-              />
-            </PaginationItem>
-            
-            {pageNumbers[0] > 1 && (
-              <>
-                <PaginationItem>
-                  <PaginationLink onClick={() => onPageChange(1)} className="cursor-pointer">
-                    1
-                  </PaginationLink>
-                </PaginationItem>
-                {pageNumbers[0] > 2 && (
-                  <PaginationItem>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                )}
-              </>
-            )}
-            
-            {pageNumbers.map((page) => (
-              <PaginationItem key={page}>
-                <PaginationLink
-                  onClick={() => onPageChange(page)}
-                  isActive={page === currentPage}
-                  className="cursor-pointer"
-                >
-                  {page}
+      <Pagination>
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious 
+              onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
+              className={currentPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+            />
+          </PaginationItem>
+          
+          {pageNumbers[0] > 1 && (
+            <>
+              <PaginationItem>
+                <PaginationLink onClick={() => onPageChange(1)} className="cursor-pointer">
+                  1
                 </PaginationLink>
               </PaginationItem>
-            ))}
-            
-            {pageNumbers[pageNumbers.length - 1] < totalPages && (
-              <>
-                {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
-                  <PaginationItem>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                )}
+              {pageNumbers[0] > 2 && (
                 <PaginationItem>
-                  <PaginationLink onClick={() => onPageChange(totalPages)} className="cursor-pointer">
-                    {totalPages}
-                  </PaginationLink>
+                  <PaginationEllipsis />
                 </PaginationItem>
-              </>
-            )}
-            
-            <PaginationItem>
-              <PaginationNext 
-                onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
-                className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-              />
+              )}
+            </>
+          )}
+          
+          {pageNumbers.map((page) => (
+            <PaginationItem key={page}>
+              <PaginationLink
+                onClick={() => onPageChange(page)}
+                isActive={page === currentPage}
+                className="cursor-pointer"
+              >
+                {page}
+              </PaginationLink>
             </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      </div>
+          ))}
+          
+          {pageNumbers[pageNumbers.length - 1] < totalPages && (
+            <>
+              {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+              <PaginationItem>
+                <PaginationLink onClick={() => onPageChange(totalPages)} className="cursor-pointer">
+                  {totalPages}
+                </PaginationLink>
+              </PaginationItem>
+            </>
+          )}
+          
+          <PaginationItem>
+            <PaginationNext 
+              onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
+              className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
     </div>
   );
 };

@@ -20,16 +20,15 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
   const [filter, setFilter] = useState<DocumentFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentItem | null>(null);
 
+  const itemsPerPage = 10; // Fixo em 10 arquivos por página
   const { searchDocuments, loading } = useDocumentSearch();
   const { handleDownload, handleDelete } = useDocumentActions(() => {
-    // Recarregar a página atual após ações
     loadDocuments();
   });
 
@@ -73,11 +72,6 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-  };
-
-  const handleItemsPerPageChange = (items: number) => {
-    setItemsPerPage(items);
-    setCurrentPage(1); // Resetar para primeira página
   };
 
   const getEmptyStateMessage = () => {
@@ -143,7 +137,6 @@ export const DocumentList: React.FC<DocumentListProps> = ({ refreshTrigger }) =>
               totalCount={totalCount}
               itemsPerPage={itemsPerPage}
               onPageChange={handlePageChange}
-              onItemsPerPageChange={handleItemsPerPageChange}
             />
           </>
         )}
