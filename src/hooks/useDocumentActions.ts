@@ -11,33 +11,85 @@ export const useDocumentActions = (onRefetch: () => void) => {
 
   const handleDownload = async (documentItem: DocumentItem) => {
     try {
-      // Obter URL pública do arquivo
+      console.log('Iniciando download do arquivo:', documentItem.file_path);
+      
+      // Primeiro, verificar se o arquivo existe no storage
+      const { data: fileList, error: listError } = await supabase.storage
+        .from('documents')
+        .list(documentItem.file_path.split('/')[0], {
+          limit: 100,
+          offset: 0,
+        });
+
+      if (listError) {
+        console.error('Erro ao listar arquivos:', listError);
+        throw new Error('Erro ao acessar o storage de documentos');
+      }
+
+      const fileName = documentItem.file_path.split('/').pop();
+      const fileExists = fileList?.some(file => file.name === fileName);
+      
+      if (!fileExists) {
+        console.error('Arquivo não encontrado no storage:', documentItem.file_path);
+        throw new Error('Arquivo não encontrado no servidor');
+      }
+
+      console.log('Arquivo encontrado, criando URL assinada...');
+
+      // Criar URL assinada com tempo de validade maior
       const { data, error } = await supabase.storage
         .from('documents')
         .createSignedUrl(documentItem.file_path, 3600); // 1 hora de validade
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao criar URL assinada:', error);
+        throw new Error('Erro ao gerar link de download: ' + error.message);
+      }
+
+      if (!data || !data.signedUrl) {
+        throw new Error('URL de download não foi gerada corretamente');
+      }
+
+      console.log('URL assinada criada, fazendo download...');
 
       // Fazer download do arquivo
       const response = await fetch(data.signedUrl);
-      if (!response.ok) throw new Error('Erro ao baixar o arquivo');
+      
+      if (!response.ok) {
+        console.error('Erro na resposta do fetch:', response.status, response.statusText);
+        throw new Error(`Erro ao baixar o arquivo: ${response.status} ${response.statusText}`);
+      }
 
       const blob = await response.blob();
+      console.log('Blob criado, tamanho:', blob.size);
+
+      if (blob.size === 0) {
+        throw new Error('Arquivo está vazio ou não pôde ser baixado');
+      }
+
       const url = URL.createObjectURL(blob);
       
-      // CORREÇÃO: Usar window.document em vez de document para evitar conflito
+      // Criar link de download
       const downloadLink = window.document.createElement('a');
       downloadLink.href = url;
       downloadLink.download = documentItem.name;
+      downloadLink.style.display = 'none';
+      
       window.document.body.appendChild(downloadLink);
       downloadLink.click();
       window.document.body.removeChild(downloadLink);
-      URL.revokeObjectURL(url);
+      
+      // Limpar a URL do objeto após um pequeno delay
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 100);
 
       toast({
         title: "Download concluído",
         description: `${documentItem.name} foi baixado com sucesso.`,
       });
+
+      console.log('Download concluído com sucesso');
     } catch (error: any) {
       console.error('Erro no download:', error);
       toast({
