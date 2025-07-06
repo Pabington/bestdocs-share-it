@@ -43,13 +43,11 @@ export const useDocumentSearch = () => {
       if (filter === 'admin_all' && isAdmin) {
         // Admin pode ver todos os documentos - sem filtros adicionais
       } else if (filter === 'my_private') {
-        const privateFilter = `and(user_id.eq.${user.id},visibility.eq.private)`;
-        countQuery = countQuery.and(privateFilter);
-        dataQuery = dataQuery.and(privateFilter);
+        countQuery = countQuery.eq('user_id', user.id).eq('visibility', 'private');
+        dataQuery = dataQuery.eq('user_id', user.id).eq('visibility', 'private');
       } else if (filter === 'public') {
-        const publicFilter = 'visibility.eq.public';
-        countQuery = countQuery.and(publicFilter);
-        dataQuery = dataQuery.and(publicFilter);
+        countQuery = countQuery.eq('visibility', 'public');
+        dataQuery = dataQuery.eq('visibility', 'public');
       } else if (filter === 'shared') {
         // Para documentos compartilhados, precisamos fazer uma consulta diferente
         const { data: sharedDocs, error: sharedError } = await supabase
@@ -97,9 +95,8 @@ export const useDocumentSearch = () => {
         };
       } else if (filter === 'all') {
         // Documentos do usuário (privados) + públicos + compartilhados
-        const userDocsFilter = `or(and(user_id.eq.${user.id},visibility.eq.private),visibility.eq.public)`;
-        countQuery = countQuery.and(userDocsFilter);
-        dataQuery = dataQuery.and(userDocsFilter);
+        countQuery = countQuery.or(`and(user_id.eq.${user.id},visibility.eq.private),visibility.eq.public`);
+        dataQuery = dataQuery.or(`and(user_id.eq.${user.id},visibility.eq.private),visibility.eq.public`);
 
         // Adicionar documentos compartilhados separadamente
         const { data: sharedDocsData } = await supabase
