@@ -15,6 +15,7 @@ export const ResetPasswordForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [session, setSession] = useState<any>(null);
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   // Validações de senha forte
   const passwordValidations = {
@@ -71,16 +72,13 @@ export const ResetPasswordForm = () => {
 
       if (error) throw error;
 
+      // Marcar como sucesso para mostrar a tela de confirmação
+      setResetSuccess(true);
+
       toast({
         title: "Senha redefinida com sucesso",
-        description: "Sua senha foi alterada. Você será redirecionado para o login.",
+        description: "Sua nova senha foi configurada. Você já pode fazer login.",
       });
-
-      // Fazer logout e redirecionar para login
-      await supabase.auth.signOut();
-      setTimeout(() => {
-        window.location.href = '/auth';
-      }, 2000);
 
     } catch (error: any) {
       toast({
@@ -92,6 +90,37 @@ export const ResetPasswordForm = () => {
       setLoading(false);
     }
   };
+
+  const handleGoToLogin = async () => {
+    // Fazer logout para limpar a sessão e redirecionar para login
+    await supabase.auth.signOut();
+    window.location.href = '/auth';
+  };
+
+  // Tela de sucesso após redefinição
+  if (resetSuccess) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle className="h-6 w-6 text-green-600" />
+          </div>
+          <CardTitle className="text-2xl text-green-600">Senha redefinida com sucesso!</CardTitle>
+          <CardDescription>
+            Sua nova senha foi configurada. Você já pode fazer login com sua nova senha.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={handleGoToLogin}
+            className="w-full"
+          >
+            Ir para o login
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!session) {
     return (
