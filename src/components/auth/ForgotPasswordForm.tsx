@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
 import { useSecurityValidation } from '@/hooks/useSecurityValidation';
+import { getResetPasswordConfig } from '@/utils/authUtils';
 
 interface ForgotPasswordFormProps {
   onBackToLogin: () => void;
@@ -31,9 +32,8 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
         return;
       }
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
+      const resetConfig = getResetPasswordConfig();
+      const { error } = await supabase.auth.resetPasswordForEmail(email, resetConfig);
 
       if (error) throw error;
 
