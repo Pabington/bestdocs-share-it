@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { ForgotPasswordForm } from './ForgotPasswordForm';
+import { useSecurityValidation } from '@/hooks/useSecurityValidation';
 
 export const AuthForm = () => {
   const [email, setEmail] = useState('');
@@ -15,12 +16,20 @@ export const AuthForm = () => {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const { checkAuthRateLimit } = useSecurityValidation();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Verificar rate limit antes de tentar o signup
+      const rateLimitCheck = await checkAuthRateLimit('signup', email);
+      if (!rateLimitCheck.allowed) {
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -54,6 +63,13 @@ export const AuthForm = () => {
     setLoading(true);
 
     try {
+      // Verificar rate limit antes de tentar o login
+      const rateLimitCheck = await checkAuthRateLimit('login', email);
+      if (!rateLimitCheck.allowed) {
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,

@@ -5,6 +5,23 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { DocumentItem } from '@/types/document';
 
+const logAuditEvent = async (
+  actionType: string,
+  resourceId?: string,
+  details?: any
+) => {
+  try {
+    await supabase.rpc('create_audit_log', {
+      p_action_type: actionType,
+      p_resource_type: 'document',
+      p_resource_id: resourceId,
+      p_details: details
+    });
+  } catch (error) {
+    console.error('Erro ao criar log de auditoria:', error);
+  }
+};
+
 export const useDocumentActions = (onRefetch: () => void) => {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
@@ -84,6 +101,12 @@ export const useDocumentActions = (onRefetch: () => void) => {
         URL.revokeObjectURL(url);
       }, 100);
 
+      // Log de auditoria para download
+      await logAuditEvent('document_download', documentItem.id, {
+        fileName: documentItem.name,
+        fileSize: documentItem.file_size
+      });
+
       toast({
         title: "Download concluído",
         description: `${documentItem.name} foi baixado com sucesso.`,
@@ -129,6 +152,13 @@ export const useDocumentActions = (onRefetch: () => void) => {
         .eq('id', documentItem.id);
 
       if (dbError) throw dbError;
+
+      // Log de auditoria para exclusão
+      await logAuditEvent('document_delete', documentItem.id, {
+        fileName: documentItem.name,
+        deletedBy: user?.id,
+        isAdmin: isAdmin
+      });
 
       toast({
         title: "Documento excluído",

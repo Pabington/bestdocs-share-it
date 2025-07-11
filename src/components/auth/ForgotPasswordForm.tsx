@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
+import { useSecurityValidation } from '@/hooks/useSecurityValidation';
 
 interface ForgotPasswordFormProps {
   onBackToLogin: () => void;
@@ -16,12 +17,20 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const { checkAuthRateLimit } = useSecurityValidation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Verificar rate limit antes de tentar redefinir senha
+      const rateLimitCheck = await checkAuthRateLimit('reset_password', email);
+      if (!rateLimitCheck.allowed) {
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });

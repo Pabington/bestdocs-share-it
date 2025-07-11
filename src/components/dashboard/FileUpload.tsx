@@ -9,6 +9,7 @@ import { Upload, FileText, Eye, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useSecurityValidation } from '@/hooks/useSecurityValidation';
 
 interface FileUploadProps {
   onUploadComplete: () => void;
@@ -19,38 +20,17 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
   const [visibility, setVisibility] = useState<'private' | 'public'>('private');
   const [uploading, setUploading] = useState(false);
   const { user } = useAuth();
+  const { validateFileUpload, isValidating } = useSecurityValidation();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       
-      // Validar tamanho do arquivo (máximo 10MB)
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        toast({
-          title: "Arquivo muito grande",
-          description: "O arquivo deve ter no máximo 10MB.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Validar tipo de arquivo
-      const allowedTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'text/plain',
-        'image/jpeg',
-        'image/jpg',
-        'image/png'
-      ];
-
-      if (!allowedTypes.includes(selectedFile.type)) {
-        toast({
-          title: "Tipo de arquivo não suportado",
-          description: "Apenas arquivos PDF, DOC, DOCX, TXT, JPG, JPEG e PNG são permitidos.",
-          variant: "destructive",
-        });
+      // Validação robusta no backend
+      const validation = await validateFileUpload(selectedFile);
+      if (!validation.valid) {
+        // Reset input
+        e.target.value = '';
         return;
       }
 
@@ -135,12 +115,15 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
             id="file"
             type="file"
             onChange={handleFileChange}
-            accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
-            disabled={uploading}
+            accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp,.xls,.xlsx,.ppt,.pptx,.csv"
+            disabled={uploading || isValidating}
           />
           <p className="text-xs text-gray-500">
-            Tipos permitidos: PDF, DOC, DOCX, TXT, JPG, PNG (máx. 10MB)
+            Tipos permitidos: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, CSV, JPG, PNG, GIF, WEBP (máx. 50MB)
           </p>
+          {isValidating && (
+            <p className="text-xs text-blue-600">Validando arquivo...</p>
+          )}
         </div>
 
         <div className="space-y-2">

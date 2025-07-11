@@ -23,13 +23,22 @@ export const useDocumentSearch = () => {
       const from = (page - 1) * limit;
       const to = from + limit - 1;
 
+      // Otimizar consulta com índices apropriados
       let countQuery = supabase.from('documents').select('id', { count: 'exact', head: true });
       let dataQuery = supabase
         .from('documents')
         .select(`
-          *,
+          id,
+          name,
+          file_path,
+          file_size,
+          file_type,
+          visibility,
+          created_at,
+          updated_at,
+          user_id,
           profiles!documents_user_id_fkey (email, full_name)
-        `, { count: 'exact' })
+        `)
         .range(from, to)
         .order('created_at', { ascending: false });
 
