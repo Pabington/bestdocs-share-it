@@ -50,27 +50,6 @@ export type Database = {
         }
         Relationships: []
       }
-      authorized_emails: {
-        Row: {
-          added_by: string
-          created_at: string
-          email: string
-          id: string
-        }
-        Insert: {
-          added_by: string
-          created_at?: string
-          email: string
-          id?: string
-        }
-        Update: {
-          added_by?: string
-          created_at?: string
-          email?: string
-          id?: string
-        }
-        Relationships: []
-      }
       document_shares: {
         Row: {
           created_at: string
@@ -276,10 +255,6 @@ export type Database = {
       }
       is_admin: {
         Args: { user_id: string }
-        Returns: boolean
-      }
-      is_email_authorized: {
-        Args: { check_email: string }
         Returns: boolean
       }
       set_limit: {

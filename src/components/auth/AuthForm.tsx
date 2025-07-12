@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { ForgotPasswordForm } from './ForgotPasswordForm';
 import { useSecurityValidation } from '@/hooks/useSecurityValidation';
-import { useAuthorizedEmails } from '@/hooks/useAuthorizedEmails';
 
 export const AuthForm = () => {
   const [email, setEmail] = useState('');
@@ -18,25 +17,12 @@ export const AuthForm = () => {
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { checkAuthRateLimit } = useSecurityValidation();
-  const { checkEmailAuthorized } = useAuthorizedEmails();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Verificar se o e-mail está autorizado
-      const isAuthorized = await checkEmailAuthorized(email);
-      if (!isAuthorized) {
-        toast({
-          title: "E-mail não autorizado",
-          description: "Seu e-mail não está autorizado para cadastro. Entre em contato com o administrador.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
       // Verificar rate limit antes de tentar o signup
       const rateLimitCheck = await checkAuthRateLimit('signup', email);
       if (!rateLimitCheck.allowed) {
