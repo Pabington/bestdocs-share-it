@@ -15,6 +15,7 @@ export function useAuthorizedEmails() {
 
   useEffect(() => {
     fetchEmails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchEmails() {
@@ -24,7 +25,7 @@ export function useAuthorizedEmails() {
         .from('authorized_emails')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       setEmails(data || []);
     } catch (error: any) {
@@ -40,17 +41,20 @@ export function useAuthorizedEmails() {
 
   async function addEmail(email: string) {
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id || null;
+
       const { error } = await supabase
         .from('authorized_emails')
-        .insert([{ email, added_by: (await supabase.auth.getUser()).data.user?.id }]);
-      
+        .insert([{ email, added_by: userId }]);
+
       if (error) throw error;
-      
+
       toast({
         title: "E-mail adicionado",
         description: `${email} foi autorizado para cadastro.`,
       });
-      
+
       fetchEmails();
     } catch (error: any) {
       toast({
@@ -67,14 +71,14 @@ export function useAuthorizedEmails() {
         .from('authorized_emails')
         .delete()
         .eq('id', id);
-      
+
       if (error) throw error;
-      
+
       toast({
         title: "E-mail removido",
         description: "E-mail removido da lista de autorizados.",
       });
-      
+
       fetchEmails();
     } catch (error: any) {
       toast({
@@ -92,7 +96,7 @@ export function useAuthorizedEmails() {
         .select('email')
         .eq('email', email.toLowerCase())
         .single();
-      
+
       if (error && error.code !== 'PGRST116') throw error;
       return !!data;
     } catch (error) {
@@ -101,12 +105,12 @@ export function useAuthorizedEmails() {
     }
   }
 
-  return { 
-    emails, 
-    loading, 
-    addEmail, 
-    removeEmail, 
+  return {
+    emails,
+    loading,
+    addEmail,
+    removeEmail,
     checkEmailAuthorized,
-    refetch: fetchEmails 
+    refetch: fetchEmails,
   };
 }
