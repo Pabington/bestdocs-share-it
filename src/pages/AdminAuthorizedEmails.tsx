@@ -6,28 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, Plus, Mail } from 'lucide-react';
 import { useAuthorizedEmails } from '@/hooks/useAuthorizedEmails';
-import { useAdmin } from '@/hooks/useAdmin';
-import { Navigate } from 'react-router-dom';
 
 const AdminAuthorizedEmails = () => {
-  const { isAdmin, loading: adminLoading } = useAdmin();
   const { emails, loading, addEmail, removeEmail } = useAuthorizedEmails();
   const [newEmail, setNewEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  console.log('AdminAuthorizedEmails: isAdmin =', isAdmin, 'adminLoading =', adminLoading);
-
-  if (adminLoading) {
-    console.log('AdminAuthorizedEmails: showing loading screen');
-    return <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center">Carregando...</div>
-    </div>;
-  }
-
-  if (!isAdmin) {
-    console.log('AdminAuthorizedEmails: user is not admin, redirecting to /');
-    return <Navigate to="/" replace />;
-  }
 
   const handleAddEmail = async (e: React.FormEvent) => {
     e.preventDefault();
