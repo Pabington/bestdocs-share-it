@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import AdminAuthorizedEmails from "./pages/AdminAuthorizedEmails";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/authorized-emails" 
+            element={
+              <ProtectedRoute>
+                <AdminAuthorizedEmails />
               </ProtectedRoute>
             } 
           />
