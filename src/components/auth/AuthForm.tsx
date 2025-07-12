@@ -14,6 +14,7 @@ export const AuthForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [accessCode, setAccessCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { checkAuthRateLimit } = useSecurityValidation();
@@ -23,6 +24,17 @@ export const AuthForm = () => {
     setLoading(true);
 
     try {
+      // Verificar código de acesso
+      if (accessCode !== 'B&$tl0ter!@s') {
+        toast({
+          title: "Código de acesso inválido",
+          description: "Por favor, verifique o código de acesso fornecido.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       // Verificar rate limit antes de tentar o signup
       const rateLimitCheck = await checkAuthRateLimit('signup', email);
       if (!rateLimitCheck.allowed) {
@@ -181,6 +193,17 @@ export const AuthForm = () => {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="accessCode">Código de acesso</Label>
+                  <Input
+                    id="accessCode"
+                    type="text"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value)}
+                    placeholder="Digite o código de acesso"
                     required
                   />
                 </div>
