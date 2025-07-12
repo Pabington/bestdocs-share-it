@@ -15,13 +15,17 @@ const AdminAuthorizedEmails = () => {
   const [newEmail, setNewEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  console.log('AdminAuthorizedEmails: isAdmin =', isAdmin, 'adminLoading =', adminLoading);
+
   if (adminLoading) {
+    console.log('AdminAuthorizedEmails: showing loading screen');
     return <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center">Carregando...</div>
     </div>;
   }
 
   if (!isAdmin) {
+    console.log('AdminAuthorizedEmails: user is not admin, redirecting to /');
     return <Navigate to="/" replace />;
   }
 
