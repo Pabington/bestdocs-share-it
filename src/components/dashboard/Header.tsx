@@ -1,10 +1,10 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Shield, Settings } from 'lucide-react';
+import { LogOut, User, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Badge } from '@/components/ui/badge';
-import { Link } from 'react-router-dom';
 
 export const Header = () => {
   const { user, signOut } = useAuth();
@@ -31,15 +31,6 @@ export const Header = () => {
               </Badge>
             )}
           </div>
-          
-          {isAdmin && (
-            <Link to="/admin/authorized-emails">
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Admin
-              </Button>
-            </Link>
-          )}
           
           <Button variant="outline" size="sm" onClick={signOut} className="flex items-center gap-2">
             <LogOut className="h-4 w-4" />
