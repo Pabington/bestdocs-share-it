@@ -19,6 +19,7 @@ const AdminAuthorizedEmails = () => {
   const [newEmail, setNewEmail] = useState('');
   const [adding, setAdding] = useState(false);
 
+  // Exibe carregando enquanto verifica se é admin
   if (adminLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -27,11 +28,16 @@ const AdminAuthorizedEmails = () => {
     );
   }
 
+  // Se não for admin, mostra mensagem de acesso restrito
   if (!user || !isAdmin) {
-    navigate('/');
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg text-red-600">Acesso restrito a administradores.</div>
+      </div>
+    );
   }
 
+  // Função para adicionar novo e-mail autorizado
   const handleAddEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmail.trim()) return;
@@ -42,6 +48,7 @@ const AdminAuthorizedEmails = () => {
     setAdding(false);
   };
 
+  // Função para remover e-mail autorizado
   const handleRemoveEmail = async (id: string) => {
     await removeEmail(id);
   };
