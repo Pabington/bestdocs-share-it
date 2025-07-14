@@ -103,59 +103,61 @@ export const AuthForm = () => {
 
   if (showForgotPassword) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4 sm:p-6">
         <ForgotPasswordForm onBackToLogin={() => setShowForgotPassword(false)} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold" style={{ fontFamily: 'Work Sans', letterSpacing: '-0.093em' }}>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 sm:p-6">
+      <Card className="w-full max-w-sm sm:max-w-md mx-auto">
+        <CardHeader className="text-center space-y-2 sm:space-y-4 pb-4 sm:pb-6">
+          <CardTitle className="text-2xl sm:text-3xl font-bold" style={{ fontFamily: 'Work Sans', letterSpacing: '-0.093em' }}>
             <span style={{ color: '#fc8110' }}>Best</span>
             <span style={{ color: '#545454' }}>docs</span>
           </CardTitle>
-          <CardDescription>Sistema de gerenciamento de documentos</CardDescription>
+          <CardDescription className="text-sm sm:text-base">Sistema de gerenciamento de documentos</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Entrar</TabsTrigger>
-              <TabsTrigger value="signup">Registrar</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 h-10 sm:h-11">
+              <TabsTrigger value="signin" className="text-sm sm:text-base">Entrar</TabsTrigger>
+              <TabsTrigger value="signup" className="text-sm sm:text-base">Registrar</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
+            <TabsContent value="signin" className="mt-4 sm:mt-6">
+              <form onSubmit={handleSignIn} className="space-y-4 sm:space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-sm sm:text-base">Email</Label>
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    className="h-10 sm:h-11 text-base"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
+                  <Label htmlFor="password" className="text-sm sm:text-base">Senha</Label>
                   <Input
                     id="password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    className="h-10 sm:h-11 text-base"
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-11 sm:h-12 text-base font-medium" disabled={loading}>
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
                 <div className="text-center">
                   <Button
                     type="button"
                     variant="link"
-                    className="text-sm"
+                    className="text-sm sm:text-base h-auto p-0"
                     onClick={() => setShowForgotPassword(true)}
                   >
                     Esqueceu sua senha?
@@ -164,50 +166,54 @@ export const AuthForm = () => {
               </form>
             </TabsContent>
             
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
+            <TabsContent value="signup" className="mt-4 sm:mt-6">
+              <form onSubmit={handleSignUp} className="space-y-4 sm:space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Nome completo</Label>
+                  <Label htmlFor="fullName" className="text-sm sm:text-base">Nome completo</Label>
                   <Input
                     id="fullName"
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
+                    className="h-10 sm:h-11 text-base"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-sm sm:text-base">Email</Label>
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    className="h-10 sm:h-11 text-base"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
+                  <Label htmlFor="password" className="text-sm sm:text-base">Senha</Label>
                   <Input
                     id="password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    className="h-10 sm:h-11 text-base"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="accessCode">Código de acesso</Label>
+                  <Label htmlFor="accessCode" className="text-sm sm:text-base">Código de acesso</Label>
                   <Input
                     id="accessCode"
                     type="text"
                     value={accessCode}
                     onChange={(e) => setAccessCode(e.target.value)}
                     placeholder="Digite o código de acesso"
+                    className="h-10 sm:h-11 text-base"
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-11 sm:h-12 text-base font-medium" disabled={loading}>
                   {loading ? "Registrando..." : "Registrar"}
                 </Button>
               </form>

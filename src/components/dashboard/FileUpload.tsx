@@ -101,53 +101,54 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          Enviar Documento
+    <Card className="h-fit">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <Upload className="h-4 w-4 sm:h-5 sm:w-5" />
+          <span className="truncate">Enviar Documento</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="file">Arquivo</Label>
+          <Label htmlFor="file" className="text-sm sm:text-base">Arquivo</Label>
           <Input
             id="file"
             type="file"
             onChange={handleFileChange}
             accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp,.xls,.xlsx,.ppt,.pptx,.csv"
             disabled={uploading || isValidating}
+            className="h-10 sm:h-11 text-sm sm:text-base"
           />
-          <p className="text-xs text-gray-500">
-            Tipos permitidos: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, CSV, JPG, PNG, GIF, WEBP (máx. 50MB)
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            PDF, DOC, XLS, PPT, TXT, CSV, IMG (máx. 50MB)
           </p>
           {isValidating && (
-            <p className="text-xs text-blue-600">Validando arquivo...</p>
+            <p className="text-xs sm:text-sm text-primary">Validando arquivo...</p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="visibility">Visibilidade</Label>
+          <Label htmlFor="visibility" className="text-sm sm:text-base">Visibilidade</Label>
           <Select value={visibility} onValueChange={(value: 'private' | 'public') => setVisibility(value)} disabled={uploading}>
-            <SelectTrigger>
+            <SelectTrigger className="h-10 sm:h-11">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-popover border">
               <SelectItem value="private">
                 <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
+                  <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                   <div>
-                    <div>Privado</div>
-                    <div className="text-xs text-gray-500">Apenas você pode ver</div>
+                    <div className="text-sm">Privado</div>
+                    <div className="text-xs text-muted-foreground">Apenas você pode ver</div>
                   </div>
                 </div>
               </SelectItem>
               <SelectItem value="public">
                 <div className="flex items-center gap-2">
-                  <Eye className="h-4 w-4" />
+                  <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                   <div>
-                    <div>Público</div>
-                    <div className="text-xs text-gray-500">Todos os usuários podem ver</div>
+                    <div className="text-sm">Público</div>
+                    <div className="text-xs text-muted-foreground">Todos os usuários podem ver</div>
                   </div>
                 </div>
               </SelectItem>
@@ -156,11 +157,11 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
         </div>
 
         {file && (
-          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <FileText className="h-5 w-5 text-blue-600" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-blue-900">{file.name}</p>
-              <p className="text-xs text-blue-600">{formatFileSize(file.size)}</p>
+          <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-accent rounded-lg border">
+            <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-foreground truncate">{file.name}</p>
+              <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
             </div>
           </div>
         )}
@@ -168,7 +169,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete }) => {
         <Button 
           onClick={handleUpload} 
           disabled={!file || uploading}
-          className="w-full"
+          className="w-full h-10 sm:h-11 text-sm sm:text-base font-medium"
         >
           {uploading ? "Enviando..." : "Enviar Arquivo"}
         </Button>

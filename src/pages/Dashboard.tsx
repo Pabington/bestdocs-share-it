@@ -12,19 +12,19 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
+      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 lg:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+          <div className="lg:col-span-1 order-2 lg:order-1">
             <FileUpload onUploadComplete={handleUploadComplete} />
           </div>
           
-          <div className="lg:col-span-2">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Meus Documentos</h2>
-              <p className="text-gray-600">Gerencie seus arquivos e compartilhamentos</p>
+          <div className="lg:col-span-2 order-1 lg:order-2">
+            <div className="mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-foreground">Meus Documentos</h2>
+              <p className="text-sm sm:text-base text-muted-foreground mt-1">Gerencie seus arquivos e compartilhamentos</p>
             </div>
             <DocumentList refreshTrigger={refreshTrigger} />
           </div>

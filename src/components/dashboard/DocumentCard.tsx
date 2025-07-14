@@ -76,10 +76,89 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
 
   return (
     <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
+      <CardContent className="p-3 sm:p-4">
+        {/* Mobile Layout */}
+        <div className="block sm:hidden space-y-3">
+          <div className="flex items-start gap-3">
+            <FileText className="h-6 w-6 text-primary shrink-0 mt-1" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-medium text-sm truncate">{document.name}</h3>
+                <Badge variant="outline" className="text-xs shrink-0">
+                  {getFileExtension(document.name)}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {formatFileSize(document.file_size)} • {formatDate(document.created_at)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                <span className="font-medium">{getUserDisplayName()}</span>
+                {document.profiles && document.user_id !== user?.id && (
+                  <span className="text-muted-foreground/70"> ({document.profiles.email})</span>
+                )}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <Badge variant={getOriginBadgeVariant()} className="text-xs">
+              {document.visibility === 'public' ? (
+                <>
+                  <Eye className="h-3 w-3 mr-1" />
+                  <span className="hidden xs:inline">Público</span>
+                  <span className="xs:hidden">Pub</span>
+                </>
+              ) : (
+                <>
+                  <Users className="h-3 w-3 mr-1" />
+                  <span className="hidden xs:inline">Privado</span>
+                  <span className="xs:hidden">Priv</span>
+                </>
+              )}
+            </Badge>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDownload(document)}
+                title="Baixar arquivo"
+                className="h-8 w-8 p-0"
+              >
+                <Download className="h-3 w-3" />
+              </Button>
+
+              {canShare && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onShare(document)}
+                  title="Compartilhar arquivo"
+                  className="h-8 w-8 p-0"
+                >
+                  <Share2 className="h-3 w-3" />
+                </Button>
+              )}
+
+              {canDelete && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onDelete(document)}
+                  title={isAdmin && document.user_id !== user?.id ? "Excluir arquivo (Admin)" : "Excluir arquivo"}
+                  className="h-8 w-8 p-0"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden sm:flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <FileText className="h-8 w-8 text-blue-500" />
+            <FileText className="h-8 w-8 text-primary" />
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-medium">{document.name}</h3>
@@ -87,17 +166,17 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
                   {getFileExtension(document.name)}
                 </Badge>
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 {formatFileSize(document.file_size)} • {formatDate(document.created_at)}
               </p>
-              <p className="text-xs text-gray-600 flex items-center gap-1">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <span>Enviado por:</span>
                 <span className="font-medium">{getUserDisplayName()}</span>
                 {document.profiles && document.user_id !== user?.id && (
-                  <span className="text-gray-400">({document.profiles.email})</span>
+                  <span className="text-muted-foreground/70">({document.profiles.email})</span>
                 )}
               </p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-muted-foreground/50">
                 {getDocumentOrigin()}
               </p>
             </div>
