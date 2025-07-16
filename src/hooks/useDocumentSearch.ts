@@ -92,9 +92,97 @@ export const useDocumentSearch = () => {
           currentPage: page
         };
       } else if (filter === 'all') {
-        // Documentos do usuário (privados) + públicos
-        countQuery = countQuery.or(`and(user_id.eq.${user.id},visibility.eq.private),visibility.eq.public`);
-        dataQuery = dataQuery.or(`and(user_id.eq.${user.id},visibility.eq.private),visibility.eq.public`);
+        // Monta filtro de busca se houver termo
+        const nameFilter = searchTerm.trim()
+          ? { name: `ilike.%${searchTerm.trim()}%` }
+          : {};
+
+        // 1. Documentos privados do usuário
+        const { data: myPrivateDocs = [] } = await supabase
+          .from('documents')
+          .select(`
+            id,
+            name,
+            file_path,
+            file_size,
+            file_type,
+            visibility,
+            created_at,
+            updated_at,
+            user_id,
+            profiles!documents_user_id_fkey (email, full_name)
+          `)
+          .eq('user_id', user.id)
+          .eq('visibility', 'private')
+          .match(nameFilter);
+
+        // 2. Documentos públicos
+        const { data: publicDocs = [] } = await supabase
+          .from('documents')
+          .select(`
+            id,
+            name,
+            file_path,
+            file_size,
+            file_type,
+            visibility,
+            created_at,
+            updated_at,
+            user_id,
+            profiles!documents_user_id_fkey (email, full_name)
+          `)
+          .eq('visibility', 'public')
+          .match(nameFilter);
+
+        // 3. Documentos compartilhados com o usuário
+        let sharedDocs = [];
+        const { data: sharedDocsData = [] } = await supabase
+          .from('document_shares')
+          .select(`
+            documents!inner (
+              id,
+              name,
+              file_path,
+              file_size,
+              file_type,
+              visibility,
+              created_at,
+              updated_at,
+              user_id,
+              profiles!documents_user_id_fkey (email, full_name)
+            )
+          `)
+          .eq('shared_with_user_id', user.id);
+
+        if (sharedDocsData.length > 0) {
+          sharedDocs = sharedDocsData
+            .map(share => share.documents)
+            .filter(doc => {
+              if (!doc) return false;
+              if (!searchTerm.trim()) return true;
+              // Filtro manual para nome, pois não dá para usar .match() em join
+              return doc.name.toLowerCase().includes(searchTerm.trim().toLowerCase());
+            });
+        }
+
+        // Unir todos, removendo duplicatas pelo id
+        const allDocs = [...myPrivateDocs, ...publicDocs, ...sharedDocs];
+        const uniqueDocsMap = new Map();
+        allDocs.forEach(doc => {
+          if (doc && doc.id) uniqueDocsMap.set(doc.id, doc);
+        });
+        const uniqueDocs = Array.from(uniqueDocsMap.values());
+
+        // Paginação manual
+        const paginatedDocs = uniqueDocs.slice(from, to + 1);
+
+        setLoading(false);
+        return {
+          documents: paginatedDocs,
+          totalCount: uniqueDocs.length,
+          totalPages: Math.ceil(uniqueDocs.length / limit),
+          currentPage: page
+        };
       }
 
       // Executar consultas para casos simples
